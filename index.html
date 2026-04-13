@@ -1,82 +1,170 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>SecurePoll · Total Voting System</title>
+  <title>Hotel Receipt Generator | Premium Billing System</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Google Font & simple icons (Font Awesome CDN for clean UI) -->
+  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- jsPDF and html2canvas for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-  <div class="app-container">
-    <!-- header section -->
-    <header>
-      <div class="logo-area">
-        <i class="fas fa-check-double"></i>
-        <h1>TotalVote<span>System</span></h1>
-      </div>
-      <p class="tagline">real-time | transparent | decentralized spirit</p>
-    </header>
+  <div class="app-wrapper">
+    <div class="container">
+      <!-- Header Section -->
+      <header class="main-header">
+        <div class="logo">
+          <i class="fas fa-hotel"></i>
+          <h1>Grand<span>Receipt</span></h1>
+        </div>
+        <p class="subhead">Professional Hotel Billing & Receipt Generator</p>
+      </header>
 
-    <!-- main grid: left panel (candidates) + right panel (stats/controls) -->
-    <div class="dashboard">
-      <!-- LEFT COLUMN: voting card -->
-      <div class="voting-section card">
-        <div class="section-title">
-          <i class="fas fa-user-check"></i>
-          <h2>Cast your vote</h2>
-        </div>
-        <p class="info-note">Select one candidate below & confirm your choice.</p>
-        
-        <div id="candidatesList" class="candidates-grid">
-          <!-- dynamic JS injection -->
-        </div>
-
-        <div class="vote-action">
-          <button id="submitVoteBtn" class="btn-primary glow-on-hover">
-            <i class="fas fa-vote-yea"></i> SUBMIT VOTE
-          </button>
-          <div id="voteFeedback" class="feedback-msg"></div>
-        </div>
-      </div>
-
-      <!-- RIGHT COLUMN: realtime results + admin -->
-      <div class="results-section card">
-        <div class="section-title">
-          <i class="fas fa-chart-simple"></i>
-          <h2>Live results</h2>
-          <span id="totalVotesBadge" class="badge">0 votes</span>
-        </div>
-        
-        <div id="resultsContainer" class="results-list">
-          <!-- dynamic results bar chart style -->
-        </div>
-
-        <div class="admin-panel">
-          <hr class="divider">
-          <div class="admin-header">
-            <i class="fas fa-shield-alt"></i>
-            <h3>Administration</h3>
+      <!-- Main Content Grid -->
+      <div class="dashboard-grid">
+        <!-- LEFT PANEL: Billing Form -->
+        <div class="form-panel card">
+          <div class="panel-title">
+            <i class="fas fa-file-invoice"></i>
+            <h2>Generate Receipt</h2>
           </div>
-          <div class="admin-actions">
-            <button id="resetSystemBtn" class="btn-outline">
-              <i class="fas fa-undo-alt"></i> Reset election
-            </button>
-            <button id="exportResultsBtn" class="btn-outline">
-              <i class="fas fa-download"></i> Export JSON
-            </button>
+
+          <form id="receiptForm" class="billing-form">
+            <!-- Guest Information -->
+            <div class="form-section">
+              <h3><i class="fas fa-user"></i> Guest Details</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-user-circle"></i> Full Name *</label>
+                  <input type="text" id="guestName" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-envelope"></i> Email *</label>
+                  <input type="email" id="guestEmail" placeholder="guest@example.com" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-phone"></i> Phone Number</label>
+                  <input type="tel" id="guestPhone" placeholder="+1 234 567 8900">
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-id-card"></i> Guest ID / Passport</label>
+                  <input type="text" id="guestId" placeholder="Optional">
+                </div>
+              </div>
+            </div>
+
+            <!-- Stay Information -->
+            <div class="form-section">
+              <h3><i class="fas fa-calendar-alt"></i> Stay Details</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-calendar-check"></i> Check-in Date *</label>
+                  <input type="date" id="checkinDate" required>
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-calendar-times"></i> Check-out Date *</label>
+                  <input type="date" id="checkoutDate" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-bed"></i> Room Number *</label>
+                  <input type="text" id="roomNumber" placeholder="e.g., 204, Suite 12" required>
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-tag"></i> Room Type</label>
+                  <select id="roomType">
+                    <option value="Standard">Standard Room</option>
+                    <option value="Deluxe">Deluxe Room</option>
+                    <option value="Suite">Executive Suite</option>
+                    <option value="Presidential">Presidential Suite</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charges Breakdown -->
+            <div class="form-section">
+              <h3><i class="fas fa-receipt"></i> Charges & Services</h3>
+              <div class="charges-grid">
+                <div class="form-group">
+                  <label><i class="fas fa-dollar-sign"></i> Room Rate (per night) *</label>
+                  <input type="number" id="roomRate" step="0.01" placeholder="150.00" required>
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-utensils"></i> Food & Beverage</label>
+                  <input type="number" id="foodCharge" step="0.01" placeholder="0.00" value="0">
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-concierge-bell"></i> Spa / Laundry</label>
+                  <input type="number" id="servicesCharge" step="0.01" placeholder="0.00" value="0">
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-parking"></i> Parking / Misc</label>
+                  <input type="number" id="extraCharge" step="0.01" placeholder="0.00" value="0">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-percent"></i> Tax Rate (%)</label>
+                  <input type="number" id="taxRate" step="0.5" placeholder="18" value="18" required>
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-ticket-alt"></i> Discount (Coupon)</label>
+                  <input type="number" id="discount" step="0.01" placeholder="0.00" value="0">
+                </div>
+              </div>
+              
+              <div class="form-group full-width">
+                <label><i class="fas fa-sticky-note"></i> Additional Notes / Special Requests</label>
+                <textarea id="notes" rows="2" placeholder="Early check-in, extra pillows, etc..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" id="generateReceiptBtn" class="btn-primary">
+                <i class="fas fa-receipt"></i> Generate Receipt
+              </button>
+              <button type="reset" id="resetFormBtn" class="btn-secondary">
+                <i class="fas fa-eraser"></i> Clear Form
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- RIGHT PANEL: Receipt Preview & Export -->
+        <div class="preview-panel">
+          <div class="card receipt-card" id="receiptCard">
+            <div class="panel-title">
+              <i class="fas fa-print"></i>
+              <h2>Receipt Preview</h2>
+              <div class="export-buttons">
+                <button id="downloadPDFBtn" class="btn-icon" title="Download as PDF">
+                  <i class="fas fa-file-pdf"></i> PDF
+                </button>
+                <button id="printReceiptBtn" class="btn-icon" title="Print Receipt">
+                  <i class="fas fa-print"></i> Print
+                </button>
+              </div>
+            </div>
+            
+            <!-- Receipt Content Area -->
+            <div id="receiptContent" class="receipt-wrapper">
+              <div class="empty-receipt-message">
+                <i class="fas fa-receipt" style="font-size: 48px; color: #cbd5e1;"></i>
+                <p>Fill the form and click "Generate Receipt" to preview</p>
+              </div>
+            </div>
           </div>
-          <p class="admin-note">Reset clears all votes & restores initial state.</p>
         </div>
       </div>
     </div>
-
-    <!-- footer: simple verification -->
-    <footer>
-      <p><i class="fas fa-lock"></i> Each vote recorded securely | one vote per session</p>
-    </footer>
   </div>
 
   <script src="script.js"></script>
