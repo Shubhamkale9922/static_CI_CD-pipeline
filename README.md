@@ -1,0 +1,1 @@
+# static_CI_CD-pipeline
