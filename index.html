@@ -1,1 +1,84 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>SecurePoll · Total Voting System</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Font & simple icons (Font Awesome CDN for clean UI) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- header section -->
+    <header>
+      <div class="logo-area">
+        <i class="fas fa-check-double"></i>
+        <h1>TotalVote<span>System</span></h1>
+      </div>
+      <p class="tagline">real-time | transparent | decentralized spirit</p>
+    </header>
+
+    <!-- main grid: left panel (candidates) + right panel (stats/controls) -->
+    <div class="dashboard">
+      <!-- LEFT COLUMN: voting card -->
+      <div class="voting-section card">
+        <div class="section-title">
+          <i class="fas fa-user-check"></i>
+          <h2>Cast your vote</h2>
+        </div>
+        <p class="info-note">Select one candidate below & confirm your choice.</p>
+        
+        <div id="candidatesList" class="candidates-grid">
+          <!-- dynamic JS injection -->
+        </div>
+
+        <div class="vote-action">
+          <button id="submitVoteBtn" class="btn-primary glow-on-hover">
+            <i class="fas fa-vote-yea"></i> SUBMIT VOTE
+          </button>
+          <div id="voteFeedback" class="feedback-msg"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: realtime results + admin -->
+      <div class="results-section card">
+        <div class="section-title">
+          <i class="fas fa-chart-simple"></i>
+          <h2>Live results</h2>
+          <span id="totalVotesBadge" class="badge">0 votes</span>
+        </div>
+        
+        <div id="resultsContainer" class="results-list">
+          <!-- dynamic results bar chart style -->
+        </div>
+
+        <div class="admin-panel">
+          <hr class="divider">
+          <div class="admin-header">
+            <i class="fas fa-shield-alt"></i>
+            <h3>Administration</h3>
+          </div>
+          <div class="admin-actions">
+            <button id="resetSystemBtn" class="btn-outline">
+              <i class="fas fa-undo-alt"></i> Reset election
+            </button>
+            <button id="exportResultsBtn" class="btn-outline">
+              <i class="fas fa-download"></i> Export JSON
+            </button>
+          </div>
+          <p class="admin-note">Reset clears all votes & restores initial state.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- footer: simple verification -->
+    <footer>
+      <p><i class="fas fa-lock"></i> Each vote recorded securely | one vote per session</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
