@@ -1,0 +1,14 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo Installing...
+
+  build:
+    commands:
+      - echo No build needed
+
+artifacts:
+  files:
+    - '**/*'
