@@ -1,319 +1,371 @@
+// Hotel Receipt Generator System
+// Features: Dynamic receipt generation, PDF export, Print functionality, Auto calculations
 
-// TOTAL VOTING SYSTEM - Core Logic
-// --------------------------------
-// Features: Real-time voting, local storage persistence,
-// Export results, Reset election, One-vote-per-session lock.
-
-// ---------- DATA MODEL ----------
-const CANDIDATES_DATA = [
-  { id: 1, name: "Dr. Elena Voss", party: "Progressive Future", avatar: "🌿", shortBio: "Climate & Innovation" },
-  { id: 2, name: "Marcus Chen", party: "Unity Coalition", avatar: "⚖️", shortBio: "Economic Reform" },
-  { id: 3, name: "Sofia Rivera", party: "People's Voice", avatar: "🗳️", shortBio: "Social Equality" },
-  { id: 4, name: "James Okafor", party: "New Horizons", avatar: "🚀", shortBio: "Tech & Education" }
-];
-
-// Global state
-let votes = [];        // array of { candidateId, timestamp }
-let hasVoted = false;  // session lock (one vote per session, but reset will clear)
-let selectedCandidateId = null;
-
-// DOM elements
-const candidatesContainer = document.getElementById('candidatesList');
-const resultsContainer = document.getElementById('resultsContainer');
-const submitBtn = document.getElementById('submitVoteBtn');
-const resetBtn = document.getElementById('resetSystemBtn');
-const exportBtn = document.getElementById('exportResultsBtn');
-const voteFeedback = document.getElementById('voteFeedback');
-const totalVotesBadge = document.getElementById('totalVotesBadge');
-
-// ---------- HELPER: Load/Save to localStorage ----------
-function loadVotesFromStorage() {
-  const storedVotes = localStorage.getItem('totalVoteSystem_votes');
-  const storedHasVoted = localStorage.getItem('totalVoteSystem_hasVoted');
-  
-  if (storedVotes) {
-    try {
-      votes = JSON.parse(storedVotes);
-    } catch(e) { votes = []; }
-  } else {
-    votes = [];
+class HotelReceiptGenerator {
+  constructor() {
+    this.initializeElements();
+    this.attachEventListeners();
+    this.setDefaultDates();
   }
-  
-  if (storedHasVoted !== null) {
-    hasVoted = storedHasVoted === 'true';
-  } else {
-    hasVoted = false;
-  }
-  
-  // extra security: if votes length > 0 and hasVoted is false but votes exist -> sync
-  if (votes.length > 0 && !hasVoted) {
-    hasVoted = true;
-    saveStateToLocal();
-  }
-  if (votes.length === 0 && hasVoted) {
-    hasVoted = false;
-    saveStateToLocal();
-  }
-}
 
-function saveStateToLocal() {
-  localStorage.setItem('totalVoteSystem_votes', JSON.stringify(votes));
-  localStorage.setItem('totalVoteSystem_hasVoted', hasVoted.toString());
-}
-
-// ---------- Core Vote Functions ----------
-function castVote(candidateId) {
-  if (hasVoted) {
-    showFeedback('⚠️ You have already voted! Reset election to vote again.', 'error');
-    return false;
-  }
-  
-  const candidateExists = CANDIDATES_DATA.find(c => c.id === candidateId);
-  if (!candidateExists) {
-    showFeedback('Invalid candidate selection.', 'error');
-    return false;
-  }
-  
-  // Record vote
-  const newVote = {
-    candidateId: candidateId,
-    timestamp: Date.now()
-  };
-  votes.push(newVote);
-  hasVoted = true;
-  saveStateToLocal();
-  
-  // Update UI
-  renderCandidatesList();
-  renderResults();
-  updateTotalBadge();
-  showFeedback(`✅ Vote cast for ${candidateExists.name}! Thank you for participating.`, 'success');
-  
-  // deselect any highlight
-  selectedCandidateId = null;
-  return true;
-}
-
-function resetElection() {
-  if (votes.length > 0 || hasVoted) {
-    votes = [];
-    hasVoted = false;
-    selectedCandidateId = null;
-    saveStateToLocal();
-    renderCandidatesList();
-    renderResults();
-    updateTotalBadge();
-    showFeedback('🗳️ Election has been reset. All votes cleared. You can vote again!', 'info');
-  } else {
-    showFeedback('No active votes to clear. System already clean.', 'info');
-  }
-}
-
-function exportResultsJSON() {
-  const totalVotesCount = votes.length;
-  const candidateStats = CANDIDATES_DATA.map(candidate => {
-    const voteCount = votes.filter(v => v.candidateId === candidate.id).length;
-    const percentage = totalVotesCount === 0 ? 0 : ((voteCount / totalVotesCount) * 100).toFixed(2);
-    return {
-      id: candidate.id,
-      name: candidate.name,
-      party: candidate.party,
-      votes: voteCount,
-      percentage: parseFloat(percentage)
-    };
-  });
-  
-  const exportData = {
-    exportedAt: new Date().toISOString(),
-    totalVotes: totalVotesCount,
-    results: candidateStats,
-    rawVotes: votes.map(v => ({ candidateId: v.candidateId, timestamp: v.timestamp }))
-  };
-  
-  const dataStr = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `election_results_${new Date().toISOString().slice(0,19)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showFeedback('📁 Results exported as JSON file.', 'success');
-}
-
-// ---------- UI Rendering (candidates + live results) ----------
-function renderCandidatesList() {
-  if (!candidatesContainer) return;
-  
-  candidatesContainer.innerHTML = '';
-  CANDIDATES_DATA.forEach(candidate => {
-    const voteCountForThis = votes.filter(v => v.candidateId === candidate.id).length;
-    const candidateDiv = document.createElement('div');
-    candidateDiv.className = `candidate-option ${selectedCandidateId === candidate.id ? 'selected' : ''}`;
-    candidateDiv.setAttribute('data-id', candidate.id);
+  initializeElements() {
+    // Form elements
+    this.guestName = document.getElementById('guestName');
+    this.guestEmail = document.getElementById('guestEmail');
+    this.guestPhone = document.getElementById('guestPhone');
+    this.guestId = document.getElementById('guestId');
+    this.checkinDate = document.getElementById('checkinDate');
+    this.checkoutDate = document.getElementById('checkoutDate');
+    this.roomNumber = document.getElementById('roomNumber');
+    this.roomType = document.getElementById('roomType');
+    this.roomRate = document.getElementById('roomRate');
+    this.foodCharge = document.getElementById('foodCharge');
+    this.servicesCharge = document.getElementById('servicesCharge');
+    this.extraCharge = document.getElementById('extraCharge');
+    this.taxRate = document.getElementById('taxRate');
+    this.discount = document.getElementById('discount');
+    this.notes = document.getElementById('notes');
     
-    candidateDiv.innerHTML = `
-      <div class="candidate-info">
-        <div class="candidate-avatar">${candidate.avatar}</div>
-        <div>
-          <div class="candidate-name">${candidate.name}</div>
-          <div class="candidate-bio">${candidate.party} · ${candidate.shortBio}</div>
+    // Buttons
+    this.generateBtn = document.getElementById('generateReceiptBtn');
+    this.resetBtn = document.getElementById('resetFormBtn');
+    this.downloadPDFBtn = document.getElementById('downloadPDFBtn');
+    this.printBtn = document.getElementById('printReceiptBtn');
+    
+    // Receipt container
+    this.receiptContent = document.getElementById('receiptContent');
+  }
+
+  setDefaultDates() {
+    // Set default dates: today as check-in, tomorrow as check-out
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (this.checkinDate) {
+      this.checkinDate.value = today.toISOString().split('T')[0];
+    }
+    if (this.checkoutDate) {
+      this.checkoutDate.value = tomorrow.toISOString().split('T')[0];
+    }
+    
+    // Set default room rate
+    if (this.roomRate) {
+      this.roomRate.value = '150.00';
+    }
+  }
+
+  attachEventListeners() {
+    this.generateBtn.addEventListener('click', () => this.generateReceipt());
+    this.resetBtn.addEventListener('click', () => this.resetForm());
+    this.downloadPDFBtn.addEventListener('click', () => this.downloadAsPDF());
+    this.printBtn.addEventListener('click', () => this.printReceipt());
+    
+    // Auto-calculate on input changes
+    const calculationFields = [this.roomRate, this.foodCharge, this.servicesCharge, this.extraCharge, this.taxRate, this.discount];
+    calculationFields.forEach(field => {
+      if (field) {
+        field.addEventListener('input', () => this.updatePreviewIfExists());
+      }
+    });
+  }
+
+  updatePreviewIfExists() {
+    // If there's already a receipt generated, update it live
+    if (this.receiptContent && this.receiptContent.querySelector('.generated-receipt')) {
+      this.generateReceipt();
+    }
+  }
+
+  validateForm() {
+    if (!this.guestName.value.trim()) {
+      alert('Please enter guest name');
+      this.guestName.focus();
+      return false;
+    }
+    if (!this.guestEmail.value.trim()) {
+      alert('Please enter guest email');
+      this.guestEmail.focus();
+      return false;
+    }
+    if (!this.checkinDate.value) {
+      alert('Please select check-in date');
+      return false;
+    }
+    if (!this.checkoutDate.value) {
+      alert('Please select check-out date');
+      return false;
+    }
+    if (!this.roomNumber.value.trim()) {
+      alert('Please enter room number');
+      this.roomNumber.focus();
+      return false;
+    }
+    if (!this.roomRate.value || parseFloat(this.roomRate.value) <= 0) {
+      alert('Please enter valid room rate');
+      this.roomRate.focus();
+      return false;
+    }
+    
+    // Validate dates
+    const checkin = new Date(this.checkinDate.value);
+    const checkout = new Date(this.checkoutDate.value);
+    if (checkout <= checkin) {
+      alert('Check-out date must be after check-in date');
+      return false;
+    }
+    
+    return true;
+  }
+
+  calculateNights() {
+    const checkin = new Date(this.checkinDate.value);
+    const checkout = new Date(this.checkoutDate.value);
+    const diffTime = Math.abs(checkout - checkin);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }
+
+  calculateTotals() {
+    const nights = this.calculateNights();
+    const roomRate = parseFloat(this.roomRate.value) || 0;
+    const roomTotal = nights * roomRate;
+    const foodTotal = parseFloat(this.foodCharge.value) || 0;
+    const servicesTotal = parseFloat(this.servicesCharge.value) || 0;
+    const extraTotal = parseFloat(this.extraCharge.value) || 0;
+    const discountAmount = parseFloat(this.discount.value) || 0;
+    const taxPercent = parseFloat(this.taxRate.value) || 0;
+    
+    const subtotal = roomTotal + foodTotal + servicesTotal + extraTotal;
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = (taxableAmount * taxPercent) / 100;
+    const grandTotal = taxableAmount + taxAmount;
+    
+    return {
+      nights,
+      roomRate,
+      roomTotal,
+      foodTotal,
+      servicesTotal,
+      extraTotal,
+      subtotal,
+      discountAmount,
+      taxPercent,
+      taxAmount,
+      grandTotal
+    };
+  }
+
+  generateReceipt() {
+    if (!this.validateForm()) {
+      return;
+    }
+    
+    const totals = this.calculateTotals();
+    const receiptId = 'HBL-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const currentDate = new Date().toLocaleString();
+    
+    const receiptHTML = `
+      <div class="generated-receipt" id="printableReceipt">
+        <div class="receipt-header">
+          <h2>🏨 GRAND HOTEL & RESORTS</h2>
+          <div class="hotel-name">★★★★★ Premium Hospitality</div>
+          <div class="receipt-id">Receipt No: ${receiptId}</div>
+          <div style="font-size: 0.7rem; color: #666;">Generated: ${currentDate}</div>
         </div>
-      </div>
-      <div class="vote-badge">
-        <i class="fas fa-chart-line"></i> ${voteCountForThis} votes
+        
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Guest Name</span>
+            <span class="info-value">${this.escapeHtml(this.guestName.value)}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Email / Phone</span>
+            <span class="info-value">${this.escapeHtml(this.guestEmail.value)} ${this.guestPhone.value ? '| ' + this.escapeHtml(this.guestPhone.value) : ''}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Room Details</span>
+            <span class="info-value">Room ${this.escapeHtml(this.roomNumber.value)} (${this.escapeHtml(this.roomType.value)})</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Stay Period</span>
+            <span class="info-value">${this.checkinDate.value} → ${this.checkoutDate.value} (${totals.nights} night${totals.nights !== 1 ? 's' : ''})</span>
+          </div>
+        </div>
+        
+        <table class="charges-table">
+          <tr>
+            <td>Room Charges (${totals.nights} nights × $${totals.roomRate.toFixed(2)})</td>
+            <td>$${totals.roomTotal.toFixed(2)}</td>
+          </tr>
+          ${totals.foodTotal > 0 ? `<tr><td>Food & Beverage</td><td>$${totals.foodTotal.toFixed(2)}</td></tr>` : ''}
+          ${totals.servicesTotal > 0 ? `<tr><td>Spa / Laundry Services</td><td>$${totals.servicesTotal.toFixed(2)}</td></tr>` : ''}
+          ${totals.extraTotal > 0 ? `<tr><td>Parking / Miscellaneous</td><td>$${totals.extraTotal.toFixed(2)}</td></tr>` : ''}
+          ${totals.discountAmount > 0 ? `<tr style="color: #10b981;"><td>Discount Applied</td><td>-$${totals.discountAmount.toFixed(2)}</td></tr>` : ''}
+          <tr>
+            <td>Subtotal</td>
+            <td>$${totals.subtotal.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td>Tax (${totals.taxPercent}%)</td>
+            <td>$${totals.taxAmount.toFixed(2)}</td>
+          </tr>
+          <tr class="total-row">
+            <td><strong>GRAND TOTAL</strong></td>
+            <td><strong>$${totals.grandTotal.toFixed(2)}</strong></td>
+          </tr>
+        </table>
+        
+        <div class="receipt-footer">
+          ${this.notes.value ? `<p><strong>Notes:</strong> ${this.escapeHtml(this.notes.value)}</p>` : ''}
+          <p class="thankyou">✨ Thank you for choosing Grand Hotel! ✨</p>
+          <p>Check-out time: 11:00 AM | Early check-in subject to availability</p>
+          <p>This is a computer generated receipt - valid with payment confirmation</p>
+        </div>
       </div>
     `;
     
-    // Click to select (only if hasn't voted yet)
-    candidateDiv.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (hasVoted) {
-        showFeedback('You already voted. Reset system to change your vote.', 'error');
+    this.receiptContent.innerHTML = receiptHTML;
+    
+    // Smooth scroll to receipt
+    this.receiptContent.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  
+  escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  
+  resetForm() {
+    if (confirm('Clear all form fields? This will reset the receipt preview.')) {
+      document.getElementById('receiptForm').reset();
+      this.setDefaultDates();
+      this.receiptContent.innerHTML = `
+        <div class="empty-receipt-message">
+          <i class="fas fa-receipt" style="font-size: 48px; color: #cbd5e1;"></i>
+          <p>Fill the form and click "Generate Receipt" to preview</p>
+        </div>
+      `;
+      // Reset additional fields to default
+      if (this.roomRate) this.roomRate.value = '150.00';
+      if (this.foodCharge) this.foodCharge.value = '0';
+      if (this.servicesCharge) this.servicesCharge.value = '0';
+      if (this.extraCharge) this.extraCharge.value = '0';
+      if (this.discount) this.discount.value = '0';
+      if (this.taxRate) this.taxRate.value = '18';
+    }
+  }
+  
+  async downloadAsPDF() {
+    if (!this.receiptContent.querySelector('.generated-receipt')) {
+      alert('Please generate a receipt first before downloading PDF.');
+      return;
+    }
+    
+    try {
+      const element = document.getElementById('printableReceipt');
+      if (!element) {
+        alert('Receipt content not found');
         return;
       }
-      // update selected style
-      selectedCandidateId = candidate.id;
-      renderCandidatesList();  // re-render to show selection
-    });
-    
-    candidatesContainer.appendChild(candidateDiv);
-  });
-  
-  // Disable selection visuals if already voted (disable click selection after vote)
-  if (hasVoted) {
-    const allOptions = document.querySelectorAll('.candidate-option');
-    allOptions.forEach(opt => {
-      opt.style.cursor = 'not-allowed';
-      opt.style.opacity = '0.8';
-    });
-  } else {
-    const allOptions = document.querySelectorAll('.candidate-option');
-    allOptions.forEach(opt => opt.style.cursor = 'pointer');
-  }
-}
-
-function renderResults() {
-  if (!resultsContainer) return;
-  
-  const totalVotesCast = votes.length;
-  const resultsArray = CANDIDATES_DATA.map(candidate => {
-    const count = votes.filter(v => v.candidateId === candidate.id).length;
-    const percent = totalVotesCast === 0 ? 0 : ((count / totalVotesCast) * 100).toFixed(1);
-    return {
-      ...candidate,
-      voteCount: count,
-      percentage: parseFloat(percent)
-    };
-  });
-  
-  // sort by vote count descending (optional)
-  resultsArray.sort((a,b) => b.voteCount - a.voteCount);
-  
-  resultsContainer.innerHTML = '';
-  resultsArray.forEach(candidate => {
-    const resultItem = document.createElement('div');
-    resultItem.className = 'result-item';
-    
-    const percentDisplay = totalVotesCast === 0 ? 0 : candidate.percentage;
-    const fillWidth = percentDisplay;
-    
-    resultItem.innerHTML = `
-      <div class="result-header">
-        <div class="result-name">
-          <i class="fas fa-user-circle"></i> ${candidate.name}
-          <span style="font-size:0.7rem; background:#eef2f5; padding:2px 8px; border-radius:20px;">${candidate.party}</span>
-        </div>
-        <div class="result-votes">${candidate.voteCount} vote${candidate.voteCount !== 1 ? 's' : ''}</div>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-fill" style="width: ${fillWidth}%;"></div>
-      </div>
-      <div class="percentage">${percentDisplay}% of total</div>
-    `;
-    resultsContainer.appendChild(resultItem);
-  });
-  
-  // show special message if no votes
-  if (totalVotesCast === 0) {
-    const emptyMsg = document.createElement('div');
-    emptyMsg.className = 'result-item';
-    emptyMsg.style.textAlign = 'center';
-    emptyMsg.style.padding = '1.5rem';
-    emptyMsg.innerHTML = '<i class="fas fa-chart-simple"></i> No votes cast yet. Be the first!';
-    resultsContainer.appendChild(emptyMsg);
-  }
-}
-
-function updateTotalBadge() {
-  const total = votes.length;
-  if (totalVotesBadge) {
-    totalVotesBadge.innerText = `${total} vote${total !== 1 ? 's' : ''}`;
-  }
-}
-
-function showFeedback(message, type = 'info') {
-  if (!voteFeedback) return;
-  voteFeedback.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i> ${message}`;
-  voteFeedback.className = `feedback-msg feedback-${type}`;
-  voteFeedback.style.color = type === 'error' ? '#b33' : type === 'success' ? '#1f6e5c' : '#2c6285';
-  voteFeedback.style.backgroundColor = type === 'error' ? '#ffe6e6' : type === 'success' ? '#e0f7f2' : '#eef3fc';
-  voteFeedback.style.padding = '10px';
-  voteFeedback.style.borderRadius = '60px';
-  
-  setTimeout(() => {
-    if (voteFeedback.innerHTML.includes(message)) {
-      // keep but no auto clear if it's success after 3 sec? just remove style overlay but keep last? We'll fade message after 3 sec
-      setTimeout(() => {
-        if (voteFeedback.innerHTML.includes(message)) {
-          voteFeedback.style.opacity = '0.7';
-        }
-      }, 2800);
+      
+      // Show loading state
+      const originalBtnText = this.downloadPDFBtn.innerHTML;
+      this.downloadPDFBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Generating PDF...';
+      this.downloadPDFBtn.disabled = true;
+      
+      // Use html2canvas to capture the receipt
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const imgWidth = 190; // mm
+      const pageHeight = 277; // mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let position = 10;
+      
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      
+      // Add new page if content exceeds
+      let heightLeft = imgHeight;
+      while (heightLeft > pageHeight) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      const fileName = `Hotel_Receipt_${this.guestName.value.trim().replace(/\s/g, '_')}_${Date.now()}.pdf`;
+      pdf.save(fileName);
+      
+      // Reset button
+      this.downloadPDFBtn.innerHTML = originalBtnText;
+      this.downloadPDFBtn.disabled = false;
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      alert('Error generating PDF. Please try again.');
+      this.downloadPDFBtn.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+      this.downloadPDFBtn.disabled = false;
     }
-  }, 100);
-}
-
-// ---------- Submit vote handler ----------
-function handleSubmitVote() {
-  if (hasVoted) {
-    showFeedback('❌ You have already voted! Use reset to start a new voting session.', 'error');
-    return;
   }
   
-  if (selectedCandidateId === null) {
-    showFeedback('❗ Please select a candidate before submitting your vote.', 'error');
-    return;
+  printReceipt() {
+    if (!this.receiptContent.querySelector('.generated-receipt')) {
+      alert('Please generate a receipt first before printing.');
+      return;
+    }
+    
+    const printContent = document.getElementById('printableReceipt');
+    const originalTitle = document.title;
+    document.title = `Receipt_${this.guestName.value.trim()}`;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Hotel Receipt</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+            .generated-receipt { max-width: 800px; margin: 0 auto; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+            .charges-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .charges-table td { padding: 8px 0; border-bottom: 1px solid #ddd; }
+            .total-row { font-weight: bold; border-top: 2px solid #000; }
+            @media print {
+              body { margin: 0; padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent.outerHTML}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.print();
+    printWindow.close();
+    document.title = originalTitle;
   }
-  
-  castVote(selectedCandidateId);
-  // after vote, clear selection and update UI
-  selectedCandidateId = null;
-  renderCandidatesList();
 }
 
-// ---------- Event Listeners ----------
-function bindEvents() {
-  if (submitBtn) submitBtn.addEventListener('click', handleSubmitVote);
-  if (resetBtn) resetBtn.addEventListener('click', resetElection);
-  if (exportBtn) exportBtn.addEventListener('click', exportResultsJSON);
-}
-
-// ---------- Initialization ----------
-function init() {
-  loadVotesFromStorage();
-  bindEvents();
-  renderCandidatesList();
-  renderResults();
-  updateTotalBadge();
-  
-  // extra sync for visual after storage loaded
-  if (hasVoted) {
-    selectedCandidateId = null;
-    renderCandidatesList();
-  }
-}
-
-// start the voting system
-init();
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  new HotelReceiptGenerator();
+});
