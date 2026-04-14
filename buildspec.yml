@@ -2,12 +2,16 @@ version: 0.2
 
 phases:
   install:
+    runtime-versions:
+      nodejs: 18
     commands:
-      - echo Installing...
+      - echo Installing HTML validator...
+      - npm install -g htmlhint
 
   build:
     commands:
-      - echo No build needed
+      - echo Checking HTML files for errors...
+      - htmlhint "**/*.html"
 
 artifacts:
   files:
